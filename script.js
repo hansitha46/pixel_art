@@ -1,150 +1,235 @@
-//Initial references
-let container = document.querySelector(".container");
-let gridButton = document.getElementById("submit-grid");
-let clearGridButton = document.getElementById("clear-grid");
-let gridWidth = document.getElementById("width-range");
-let gridHeight = document.getElementById("height-range");
-let colorButton = document.getElementById("color-input");
-let eraseBtn = document.getElementById("erase-btn");
-let paintBtn = document.getElementById("paint-btn");
-let widthValue = document.getElementById("width-value");
-let heightValue = document.getElementById("height-value");
+document.addEventListener('DOMContentLoaded', function() {
+    // DOM Elements
+    const gridWidth = document.getElementById('gridWidth');
+    const gridHeight = document.getElementById('gridHeight');
+    const widthDisplay = document.getElementById('widthDisplay');
+    const heightDisplay = document.getElementById('heightDisplay');
+    const colorPicker = document.getElementById('colorPicker');
+    const createGridBtn = document.getElementById('createGridBtn');
+    const paintBtn = document.getElementById('paintBtn');
+    const eraseBtn = document.getElementById('eraseBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const viewBtn = document.getElementById('viewBtn');
+    const backBtn = document.getElementById('backBtn');
+    const pixelGrid = document.getElementById('pixelGrid');
+    const gallery = document.getElementById('gallery');
+    const drawingsContainer = document.getElementById('drawingsContainer');
+    const mainContainer = document.querySelector('.container');
 
-//Events object
-let events = {
-  mouse: {
-    down: "mousedown",
-    move: "mousemove",
-    up: "mouseup",
-  },
-  touch: {
-    down: "touchstart",
-    move: "touchmove",
-    up: "touchend",
-  },
-};
+    // App state
+    let currentMode = 'paint';
+    let isMouseDown = false;
+    let drawings = JSON.parse(localStorage.getItem('pixelDrawings')) || [];
 
-let deviceType = "";
+    // Initialize the grid
+    createGrid(20, 20);
 
-//Initially draw and erase would be false
-let draw = false;
-let erase = false;
+    // Event Listeners for sliders
+    gridWidth.addEventListener('input', function() {
+        widthDisplay.textContent = `${this.value}px`;
+    });
 
-//Detect touch device
-const isTouchDevice = () => {
-  try {
-    //We try to create TouchEvent(it would fail for desktops and throw error)
-    document.createEvent("TouchEvent");
-    deviceType = "touch";
-    return true;
-  } catch (e) {
-    deviceType = "mouse";
-    return false;
-  }
-};
+    gridHeight.addEventListener('input', function() {
+        heightDisplay.textContent = `${this.value}px`;
+    });
 
-isTouchDevice();
+    // Create Grid button
+    createGridBtn.addEventListener('click', function() {
+        createGrid(parseInt(gridWidth.value), parseInt(gridHeight.value));
+    });
 
-//Create Grid
-gridButton.addEventListener("click", () => {
-  //Initially clear the grid (old grids cleared)
-  container.innerHTML = "";
-  //count variable for generating unique ids
-  let count = 0;
-  //loop for creating rows
-  for (let i = 0; i < gridHeight.value; i++) {
-    //incrementing count by 2
-    count += 2;
-    //Create row div
-    let div = document.createElement("div");
-    div.classList.add("gridRow");
-    //Create Columns
-    for (let j = 0; j < gridWidth.value; j++) {
-      count += 2;
-      let col = document.createElement("div");
-      col.classList.add("gridCol");
-      /* We need unique ids for all columns (for touch screen specifically) */
-      col.setAttribute("id", `gridCol${count}`);
+    // Mode buttons
+    paintBtn.addEventListener('click', function() {
+        currentMode = 'paint';
+        paintBtn.classList.add('active');
+        eraseBtn.classList.remove('active');
+    });
 
-      /*
-      For eg if deviceType = "mouse"
-      the statement for the event would be events[mouse].down which equals to mousedown
-      if deviceType="touch"
-      the statement for event would be events[touch].down which equals to touchstart
-       */
+    eraseBtn.addEventListener('click', function() {
+        currentMode = 'erase';
+        eraseBtn.classList.add('active');
+        paintBtn.classList.remove('active');
+    });
 
-      col.addEventListener(events[deviceType].down, () => {
-        //user starts drawing
-        draw = true;
-        //if erase = true then background = transparent else color
-        if (erase) {
-          col.style.backgroundColor = "transparent";
-        } else {
-          col.style.backgroundColor = colorButton.value;
+    // Clear button
+    clearBtn.addEventListener('click', function() {
+        if (confirm('Are you sure you want to clear the grid?')) {
+            const pixels = document.querySelectorAll('.pixel');
+            pixels.forEach(pixel => {
+                pixel.style.backgroundColor = 'white';
+            });
         }
-      });
+    });
 
-      col.addEventListener(events[deviceType].move, (e) => {
-        /* elementFromPoint returns the element at x,y position of mouse */
-        let elementId = document.elementFromPoint(
-          !isTouchDevice() ? e.clientX : e.touches[0].clientX,
-          !isTouchDevice() ? e.clientY : e.touches[0].clientY
-        ).id;
-        //checker
-        checker(elementId);
-      });
-      //Stop drawing
-      col.addEventListener(events[deviceType].up, () => {
-        draw = false;
-      });
-      //append columns
-      div.appendChild(col);
+    // Save button
+    saveBtn.addEventListener('click', function() {
+        const drawingName = prompt('Enter a name for your drawing:');
+        if (drawingName) {
+            saveDrawing(drawingName);
+        }
+    });
+
+    // View gallery button
+    viewBtn.addEventListener('click', function() {
+        mainContainer.style.display = 'none';
+        gallery.style.display = 'block';
+        loadGallery();
+    });
+
+    // Back button
+    backBtn.addEventListener('click', function() {
+        gallery.style.display = 'none';
+        mainContainer.style.display = 'block';
+    });
+
+    // Mouse events for drawing
+    document.addEventListener('mousedown', function() {
+        isMouseDown = true;
+    });
+
+    document.addEventListener('mouseup', function() {
+        isMouseDown = false;
+    });
+
+    // Prevent dragging on grid
+    pixelGrid.addEventListener('dragstart', function(e) {
+        e.preventDefault();
+    });
+
+    // Create grid function
+    function createGrid(width, height) {
+        pixelGrid.innerHTML = '';
+        pixelGrid.style.gridTemplateColumns = `repeat(${width}, 1fr)`;
+        
+        for (let i = 0; i < width * height; i++) {
+            const pixel = document.createElement('div');
+            pixel.classList.add('pixel');
+            pixel.style.width = '20px';
+            pixel.style.height = '20px';
+            
+            pixel.addEventListener('mousedown', function() {
+                paintPixel(this);
+            });
+            
+            pixel.addEventListener('mouseover', function() {
+                if (isMouseDown) {
+                    paintPixel(this);
+                }
+            });
+            
+            pixelGrid.appendChild(pixel);
+        }
     }
-    //append grid to container
-    container.appendChild(div);
+
+    // Paint pixel function
+    function paintPixel(pixel) {
+        if (currentMode === 'paint') {
+            pixel.style.backgroundColor = colorPicker.value;
+        } else if (currentMode === 'erase') {
+            pixel.style.backgroundColor = 'white';
+        }
+    }
+
+    // Save drawing function
+    function saveDrawing(name) {
+    const gridCells = document.querySelectorAll('.pixel');
+    const drawingData = [];
+    
+    // Get the actual grid dimensions from the CSS grid
+    const gridComputedStyle = window.getComputedStyle(pixelGrid);
+    const gridColumns = gridComputedStyle.gridTemplateColumns.split(' ').length;
+    const gridRows = gridComputedStyle.gridTemplateRows.split(' ').length;
+    
+    gridCells.forEach(cell => {
+        // Get the computed background color (not just the inline style)
+        const bgColor = window.getComputedStyle(cell).backgroundColor;
+        drawingData.push(bgColor);
+    });
+    
+    const drawing = {
+        name: name,
+        date: new Date().toLocaleString(),
+        width: gridColumns,
+        height: gridRows,
+        data: drawingData
+    };
+    
+    drawings.push(drawing);
+    localStorage.setItem('pixelDrawings', JSON.stringify(drawings));
+    
+    alert('Drawing saved successfully!');
   }
-});
-function checker(elementId) {
-  let gridColumns = document.querySelectorAll(".gridCol");
-  //loop through all boxes
-  gridColumns.forEach((element) => {
-    //if id matches then color
-    if (elementId == element.id) {
-      if (draw && !erase) {
-        element.style.backgroundColor = colorButton.value;
-      } else if (draw && erase) {
-        element.style.backgroundColor = "transparent";
-      }
+
+    // Load gallery function
+    function loadGallery() {
+        drawingsContainer.innerHTML = '';
+        
+        if (drawings.length === 0) {
+            drawingsContainer.innerHTML = '<p>No drawings yet. Create your first masterpiece!</p>';
+            return;
+        }
+        
+        drawings.forEach((drawing, index) => {
+            const drawingItem = document.createElement('div');
+            drawingItem.classList.add('drawing-item');
+            
+            const preview = document.createElement('div');
+            preview.classList.add('drawing-preview');
+            
+            // Create a mini representation of the drawing
+            preview.style.display = 'grid';
+            preview.style.gridTemplateColumns = `repeat(${drawing.width}, 1fr)`;
+            preview.style.gap = '1px';
+            
+            drawing.data.forEach(color => {
+                const pixel = document.createElement('div');
+                pixel.style.backgroundColor = color;
+                pixel.style.width = '100%';
+                pixel.style.height = '100%';
+                preview.appendChild(pixel);
+            });
+            
+            const drawingName = document.createElement('div');
+            drawingName.classList.add('drawing-name');
+            drawingName.textContent = drawing.name;
+            
+            const drawingDate = document.createElement('div');
+            drawingDate.classList.add('drawing-date');
+            drawingDate.textContent = drawing.date;
+            
+            drawingItem.appendChild(preview);
+            drawingItem.appendChild(drawingName);
+            drawingItem.appendChild(drawingDate);
+            
+            drawingItem.addEventListener('click', function() {
+                if (confirm('Load this drawing?')) {
+                    loadDrawing(index);
+                    gallery.style.display = 'none';
+                    mainContainer.style.display = 'block';
+                }
+            });
+            
+            drawingsContainer.appendChild(drawingItem);
+        });
     }
-  });
+
+    // Load drawing function
+function loadDrawing(index) {
+    const drawing = drawings[index];
+    
+    createGrid(drawing.width, drawing.height);
+    
+    const pixels = document.querySelectorAll('.pixel');
+    drawing.data.forEach((color, i) => {
+        if (i < pixels.length) {
+            pixels[i].style.backgroundColor = color;
+        }
+    });
 }
 
-//Clear Grid
-clearGridButton.addEventListener("click", () => {
-  container.innerHTML = "";
+    // Initialize with a welcome message
+    setTimeout(() => {
+        alert('Welcome to Pixel Art Creator! Adjust the grid size and click "Create Grid" to start. Use the controls to create your artwork. Click Save when done!');
+    }, 500);
 });
-//Erase Button
-eraseBtn.addEventListener("click", () => {
-  erase = true;
-});
-
-//Paint button
-paintBtn.addEventListener("click", () => {
-  erase = false;
-});
-
-//Display grid width and height
-gridWidth.addEventListener("input", () => {
-  widthValue.innerHTML =
-    gridWidth.value < 9 ? `0${gridWidth.value}` : gridWidth.value;
-});
-
-gridHeight.addEventListener("input", () => {
-  heightValue.innerHTML =
-    gridHeight.value < 9 ? `0${gridHeight.value}` : gridHeight.value;
-});
-
-window.onload = () => {
-  gridWidth.value = 0;
-  gridHeight.value = 0;
-};

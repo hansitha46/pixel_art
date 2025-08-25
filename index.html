@@ -3,36 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home page</title>
+    <title>Pixel Art Creator</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>PIXEL ART </h1>
-    <h2>create pixel art here</h2>
-    <div class="wrapper">
-      <div class="options">
-        <div class="opt-wrapper">
-          <div class="slider">
-            <label for="width-range"> Grid Width</label>
-            <input type="range" id="width-range" min="1" max="35" />
-            <span id="width-value">00</span>
-          </div>
-          <div class="slider">
-            <label for="height-range"> Grid Height</label>
-            <input type="range" id="height-range" min="1" max="35" />
-            <span id="height-range">00</span>
-          </div>
+    <div class="container">
+        <header>
+            <h1>Pixel Art Maker</h1>
+            <p class="subtitle">create pixel art masterpiece!</p>
+        </header>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="gridWidth">Grid Width</label>
+                <input type="range" id="gridWidth" min="5" max="50" value="20">
+                <span class="size-display" id="widthDisplay">20px</span>
+            </div>
+
+            <div class="control-group">
+                <label for="gridHeight">Grid Height</label>
+                <input type="range" id="gridHeight" min="5" max="50" value="20">
+                <span class="size-display" id="heightDisplay">20px</span>
+            </div>
+
+            <div class="control-group">
+                <label for="colorPicker">Select Color</label>
+                <input type="color" id="colorPicker" value="#ff3b30">
+            </div>
         </div>
-        <div class="opt-wrapper">
-          <button id="submit-grid">Create Grid</button>
-          <button id="clear-grid">Clear Grid</button>
-          <button id="erase-btn">Erase</button>
-          <button id="paint-btn">Paint</button>
-          <input type="color" id="color-input" />
+
+        <div class="button-group">
+            <button id="createGridBtn">Create Grid</button>
+            <button id="paintBtn" class="active">Paint</button>
+            <button id="eraseBtn">Erase</button>
+            <button id="clearBtn">Clear Grid</button>
+            
         </div>
-      </div>
-          <div class="container"></div>
+
+        <div class="grid-container">
+            <div id="pixelGrid"></div>
+        </div>
+        <div class="button-group">
+          <button id="saveBtn">Save Drawing</button>
+            <button id="viewBtn">View Gallery</button>
+
+        </div>
     </div>
+
+    <div id="gallery" class="gallery">
+        <h2>Your Pixel Art Gallery</h2>
+        <div id="drawingsContainer" class="drawings-container"></div>
+        <div class="back-button">
+            <button id="backBtn">Back to Creating</button>
+        </div>
+    </div>
+
+    <footer>
+        <p>Pixel art maker by Hansitha kaniganti</p>
+    </footer>
+
     <script src="script.js"></script>
 </body>
 </html>
